@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
+# Simple parser which shows information about a .kmall file
+#
 # Copied shamelessly from command line interface found in kmall.py
 
 import argparse
 import logging
-from kmall import KmallReader
+import kmall
 from pathlib import Path
-
-
 
 if __name__ == '__main__':
     # Handle input arguments
@@ -38,92 +38,91 @@ if __name__ == '__main__':
                                              "Files must end in .Lz, where L is an integer indicating " +
                                              "the compression level (set by -l when compresssing)"))
 
-
     parser.add_argument('-v', action='count', dest='verbose', default=0,
-                        help="Increasingly verbose output (e.g. -v -vv -vvv),"
-                             "for debugging use -vvv")
+                        help="Increasingly verbose output (e.g. -v -vv),"
+                             "for debugging use -vv")
+
     args = parser.parse_args()
 
-    loglevel = logging.WARNING - (10*args.verbose) if args.verbose > 0 else logging.WARNING
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=loglevel)
-
-    #kmall_filename = args.kmall_filename
-    #kmall_directory = args.kmall_directory
+    defaultLogLevel = 1  # warning is default
+    logLevels = [logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]
+    loglevel = logLevels[ max(0,min(len(logLevels), args.verbose+defaultLogLevel)) ]
+    logging.basicConfig(format='%(message)s', level=loglevel)
 
     verify = args.verify
 
-    # suffix = "kmall"
-    # if decompress:
-    #     suffix
-
-    # if kmall_directory:
-    #     filestoprocess = []
-    #
-    #     if verbose >= 3:
-    #         print("directory: " + directory)
-    #
-    #     # Recursively work through the directory looking for kmall files.
-    #     for root, subFolders, files in os.walk(kmall_directory):
-    #         for fileval in files:
-    #             if fileval[-suffix.__len__():] == suffix:
-    #                 filestoprocess.append(os.path.join(root, fileval))
-    # else:
-    #     filestoprocess = [kmall_filename]
-
-    # if filestoprocess.__len__() == 0:
-    #     print("No files found to process.")
-    #     sys.exit()
+    packet_counts = {}
 
     for filename in args.inputfile:
-        logging.info("")
-        logging.info("Processing: %s" % filename)
+        logging.warning("Processing: %s" % filename)
 
         # Create the class instance.
-        K = KmallReader(filename, logger=logging.getLogger() )
-        K.verbose = args.verbose
-        logging.debug("Processing file: %s" % K.filename)
+        K = kmall.KmallReader(filename)
 
         # Index file (check for index)
         K.index_file()
 
-        ## Do packet verification if requested.
-        pingcheckdata = []
-        navcheckdata = []
-        if verify:
-            K.report_packet_types()
-            pingcheckdata.append([x for x in K.check_ping_count()])
+        logging.warning("File has %d packets" % len(K.Index) )
 
-            K.extract_attitude()
-            # Report gaps in attitude data.
-            dt_att = np.diff([x.timestamp() for x in K.att["datetime"]])
-            navcheckdata.append([np.min(np.abs(dt_att)),
-                                 np.max(dt_att),
-                                 np.mean(dt_att),
-                                 1.0 / np.mean(dt_att),
-                                 sum(dt_att >= 1.0)])
-            # print("Navigation Gaps min: %0.3f, max: %0.3f, mean: %0.3f (%0.3fHz)" %
-            #      (np.min(np.abs(dt_att)),np.max(dt_att),np.mean(dt_att),1.0/np.mean(dt_att)))
-            # print("Navigation Gaps >= 1s: %d" % sum(dt_att >= 1.0))
-            logging.info("Packet statistics:")
+        ## Collect counts of each packet type
+        packet_types = K.Index['MessageType'].value_counts()
+        for type,count in packet_types.iteritems():
+            logging.info("%10s : %5d" % (type, count))
 
-            # Print column headers
-            # print('%s' % "\t".join(['File','Npings','NpingsMissing','NMissingMRZ'] +
-            #                         ['Nav Min Time Gap','Nav Max Time Gap', 'Nav Mean Time Gap','Nav Mean Freq','Nav N Gaps >1s']))
+        wrc_packets = K.Index.loc[lambda df: df['MessageType'] == "#MWC", : ]
 
-            # Print columns
-            # for x,y in zip(pingcheckdata,navcheckdata):
-            #    row = x+y
-            #    #print(row)
-            #    print("\t".join([str(x) for x in row]))
+        logging.info(wrc_packets.head(5))
 
-            # Create DataFrame to make printing easier.
-            DataCheck = pd.DataFrame([x + y for x, y in zip(pingcheckdata, navcheckdata)], columns=
-            ['File', 'Npings', 'NpingsMissing', 'NMissingMRZ'] +
-            ['NavMinTimeGap', 'NavMaxTimeGap', 'NavMeanTimeGap', 'NavMeanFreq', 'NavNGaps>1s'])
-            # K.navDataCheck = pd.DataFrame(navcheckdata,columns=['Min Time Gap','Max Time Gap', 'Mean Time Gap','Mean Freq','N Gaps >1s'])
-            pd.set_option('display.max_columns', 30)
-            pd.set_option('display.expand_frame_repr', False)
-            logging.info(DataCheck)
+        ## Step through MWC packets
+        for packet in wrc_packets.itertuples():
+            logging.info(packet)
+
+            K.FID.seek(packet.ByteOffset,0)
+
+            mwc = K.read_EMdgmMWC()
+
+            logging.info(mwc)
+
+            exit()
+
+        # ## Do packet verification if requested.
+        # pingcheckdata = []
+        # navcheckdata = []
+        # if verify:
+        #     K.report_packet_types()
+        #     pingcheckdata.append([x for x in K.check_ping_count()])
+        #
+        #     K.extract_attitude()
+        #     # Report gaps in attitude data.
+        #     dt_att = np.diff([x.timestamp() for x in K.att["datetime"]])
+        #     navcheckdata.append([np.min(np.abs(dt_att)),
+        #                          np.max(dt_att),
+        #                          np.mean(dt_att),
+        #                          1.0 / np.mean(dt_att),
+        #                          sum(dt_att >= 1.0)])
+        #     # print("Navigation Gaps min: %0.3f, max: %0.3f, mean: %0.3f (%0.3fHz)" %
+        #     #      (np.min(np.abs(dt_att)),np.max(dt_att),np.mean(dt_att),1.0/np.mean(dt_att)))
+        #     # print("Navigation Gaps >= 1s: %d" % sum(dt_att >= 1.0))
+        #     logging.info("Packet statistics:")
+        #
+        #     # Print column headers
+        #     # print('%s' % "\t".join(['File','Npings','NpingsMissing','NMissingMRZ'] +
+        #     #                         ['Nav Min Time Gap','Nav Max Time Gap', 'Nav Mean Time Gap','Nav Mean Freq','Nav N Gaps >1s']))
+        #
+        #     # Print columns
+        #     # for x,y in zip(pingcheckdata,navcheckdata):
+        #     #    row = x+y
+        #     #    #print(row)
+        #     #    print("\t".join([str(x) for x in row]))
+        #
+        #     # Create DataFrame to make printing easier.
+        #     DataCheck = pd.DataFrame([x + y for x, y in zip(pingcheckdata, navcheckdata)], columns=
+        #     ['File', 'Npings', 'NpingsMissing', 'NMissingMRZ'] +
+        #     ['NavMinTimeGap', 'NavMaxTimeGap', 'NavMeanTimeGap', 'NavMeanFreq', 'NavNGaps>1s'])
+        #     # K.navDataCheck = pd.DataFrame(navcheckdata,columns=['Min Time Gap','Max Time Gap', 'Mean Time Gap','Mean Freq','N Gaps >1s'])
+        #     pd.set_option('display.max_columns', 30)
+        #     pd.set_option('display.expand_frame_repr', False)
+        #     logging.info(DataCheck)
 
         #
         # ## Do compression if desired, at the desired level.
