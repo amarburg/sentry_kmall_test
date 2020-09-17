@@ -76,9 +76,20 @@ if __name__ == '__main__':
         logging.warning("File has %d packets" % len(K.Index) )
 
         ## Collect counts of each packet type
-        packet_types = K.Index['MessageType'].value_counts()
-        for type,count in packet_types.iteritems():
-            logging.info("%10s : %5d" % (type, count))
+        grouped = K.Index.groupby('MessageType')
+
+        duration = K.Index.index.max() - K.Index.index.min()
+        logging.info("File duration %s" % duration)
+
+        mt = grouped.sum()
+        mt['Count'] = K.Index.groupby('MessageType').count()['MessageSize']
+        mt.drop('ByteOffset', axis=1, inplace=True )
+
+        logging.info(mt)
+
+        # packet_types = K.Index['MessageType'].value_counts()
+        # for type,count in packet_types.iteritems():
+        #     logging.info("%10s : %5d" % (type, count))
 
         mwc_packets = K.Index.loc[lambda df: df['MessageType'] == "#MWC", : ]
         if args.head > 0:
