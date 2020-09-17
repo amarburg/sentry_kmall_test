@@ -7,6 +7,7 @@
 import argparse
 import logging
 import kmall
+import json
 from pathlib import Path
 
 if __name__ == '__main__':
@@ -24,6 +25,12 @@ if __name__ == '__main__':
 
     parser.add_argument('--verify','-V', action='store_true', dest ='verify',
                         default=False, help="Perform series of checks to verify the kmall file.")
+
+    parser.add_argument("--json", '-j', type=Path,
+                        help="Save data to JSON")
+
+    parser.add_argument("--head", metavar="N", type=int,
+                        help="Only process first N entries")
 
     parser.add_argument('-z', action='store_true', dest = 'compress',
                        default = False, help="Create a compressed (somewhat lossy) version of the file. See -l")
@@ -53,6 +60,10 @@ if __name__ == '__main__':
 
     packet_counts = {}
 
+    json_out = {
+        "MWC": []
+    }
+
     for filename in args.inputfile:
         logging.warning("Processing: %s" % filename)
 
@@ -69,21 +80,41 @@ if __name__ == '__main__':
         for type,count in packet_types.iteritems():
             logging.info("%10s : %5d" % (type, count))
 
-        wrc_packets = K.Index.loc[lambda df: df['MessageType'] == "#MWC", : ]
-
-        logging.info(wrc_packets.head(5))
+        mwc_packets = K.Index.loc[lambda df: df['MessageType'] == "#MWC", : ]
+        if args.head > 0:
+            mwc_packets = mwc_packets.head( args.head )
 
         ## Step through MWC packets
-        for packet in wrc_packets.itertuples():
-            logging.info(packet)
+        for packet in mwc_packets.itertuples():
+            logging.info("Reading MWC packet at offset %d" % packet.ByteOffset)
 
             K.FID.seek(packet.ByteOffset,0)
-
             mwc = K.read_EMdgmMWC()
 
-            logging.info(mwc)
 
-            exit()
+            def make_json_beam(b):
+                return {
+                    'beamPointAngReVertical_deg': b['beamPointAngReVertical_deg'],
+                    'sampleAmplitude05dB_p' : b['sampleAmplitude05dB_p'],
+                    'rxBeamPhase_deg': b['rxBeamPhase']
+                }
+
+
+            mwc_json = {
+                "beams": [make_json_beam(b) for b in mwc['beamData']]
+            }
+
+            json_out['MWC'].append(mwc_json)
+
+            #logging.info(mwc)
+
+
+
+    if args.json:
+
+        with open(args.json,'w') as fp:
+            json.dump(json_out,fp,indent=2)
+
 
         # ## Do packet verification if requested.
         # pingcheckdata = []
