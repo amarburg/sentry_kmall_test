@@ -103,16 +103,17 @@ if __name__ == '__main__':
             mwc = K.read_EMdgmMWC()
 
 
-            def make_json_beam(b):
-                return {
-                    'beamPointAngReVertical_deg': b['beamPointAngReVertical_deg'],
-                    'sampleAmplitude05dB_p' : b['sampleAmplitude05dB_p'],
-                    'rxBeamPhase_deg': b['rxBeamPhase']
-                }
+            def make_json_beam( beamData ):
 
+                ## Somewhat ugly due to the dict of lists structure
+                return [{
+                    'beamPointAngReVertical_deg': beamData['beamPointAngReVertical_deg'][i],
+                    'sampleAmplitude05dB_p' : beamData['sampleAmplitude05dB_p'][i],
+                    'rxBeamPhase_deg': beamData['rxBeamPhase_deg'][i]
+                } for i in range(len(beamData['sampleAmplitude05dB_p'])) ]
 
             mwc_json = {
-                "beams": [make_json_beam(b) for b in mwc['beamData']]
+                "beams": make_json_beam(mwc['beamData'])
             }
 
             json_out['MWC'].append(mwc_json)
