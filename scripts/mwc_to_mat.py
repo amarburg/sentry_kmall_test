@@ -10,6 +10,8 @@ import kmall
 import json
 from pathlib import Path
 
+import scipy.io as sio
+
 if __name__ == '__main__':
     # Handle input arguments
     parser = argparse.ArgumentParser(description="A python script (and class) "
@@ -27,10 +29,13 @@ if __name__ == '__main__':
                         default=False, help="Perform series of checks to verify the kmall file.")
 
     parser.add_argument("--output", '-o', type=Path,
-                        help="Save data to JSON")
+                        help="Output Mat file")
 
     parser.add_argument("--head", metavar="N", type=int,
                         help="Only process first N entries")
+
+    parser.add_argument('-z', action='store_true', dest = 'compress',
+                       default = False, help="Create a compressed (somewhat lossy) version of the file. See -l")
 
     parser.add_argument('-v', action='count', dest='verbose', default=0,
                         help="Increasingly verbose output (e.g. -v -vv),"
@@ -47,8 +52,8 @@ if __name__ == '__main__':
 
     packet_counts = {}
 
-    json_out = {
-        "MWC": []
+    mat_out = {
+        "data": { "MWC": [] }
     }
 
     for filename in args.inputfile:
@@ -103,7 +108,7 @@ if __name__ == '__main__':
                 "beams": make_json_beam(mwc['beamData'])
             }
 
-            json_out['MWC'].append(mwc_json)
+            mat_out['MWC'].append(mwc_json)
 
             #logging.info(mwc)
 
@@ -111,9 +116,9 @@ if __name__ == '__main__':
 
     if args.output:
 
-        with open(args.output,'w') as fp:
-            json.dump(json_out,fp,indent=2)
-
+        sio.savemat( args.output, mat_out, long_field_names=True,
+                        do_compression=args.compress,
+                        oned_as='column' )
 
         # ## Do packet verification if requested.
         # pingcheckdata = []
