@@ -108,7 +108,7 @@ if __name__ == '__main__':
                 "beams": make_json_beam(mwc['beamData'])
             }
 
-            mat_out['MWC'].append(mwc_json)
+            mat_out['data']['MWC'].append(mwc_json)
 
             #logging.info(mwc)
 
