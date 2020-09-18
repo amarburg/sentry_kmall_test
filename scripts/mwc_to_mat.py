@@ -10,6 +10,8 @@ import kmall
 import json
 from pathlib import Path
 
+from numpy.core.records import fromarrays
+
 import scipy.io as sio
 
 if __name__ == '__main__':
@@ -103,6 +105,7 @@ if __name__ == '__main__':
                     'sampleAmplitude05dB_p' : beamData['sampleAmplitude05dB_p'][i],
                     'rxBeamPhase_deg': beamData['rxBeamPhase_deg'][i]
                 } for i in range(len(beamData['sampleAmplitude05dB_p'])) ]
+
 
             mwc_json = {
                 "beams": make_json_beam(mwc['beamData'])
