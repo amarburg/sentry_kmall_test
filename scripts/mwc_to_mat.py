@@ -83,7 +83,7 @@ if __name__ == '__main__':
         ## Step through MWC packets
         for packet in lines_to_process.itertuples():
 
-            exclude_packet_types = [ "#SPO", "#SKM", "#SVP", "#SVT", "#CPO" ]
+            exclude_packet_types = [ "#SKM" ]
 
             if packet.MessageType in exclude_packet_types:
                 logging.debug("Offset %d:  Skipping message of type %s" %(packet.ByteOffset, packet.MessageType))
@@ -104,6 +104,19 @@ if __name__ == '__main__':
                     header = datagram['header']
                     header['dgdatetime'] = str(header['dgdatetime'])
                     as_json[key] = header
+
+                ## SVP has a datetime at the top level
+                elif key is 'datetime':
+                    as_json[key] = str(item)
+
+                ## 'sensorData' in SPO has an embedded date
+                elif key is "sensorData":
+                    sensorData = datagram['sensorData']
+                    if 'datetime' in sensorData:
+                        sensorData['datetime'] = str(sensorData['datetime'])
+                        as_json[key] = sensorData
+                    else:
+                        as_json[key] = item
 
                 elif key is 'beamData':
                     as_json[key] = dictoflists2listofdicts(datagram['beamData'])
