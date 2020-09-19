@@ -91,25 +91,56 @@ if __name__ == '__main__':
 
         ## Step through MWC packets
         for packet in mwc_packets.itertuples():
+
             logging.info("Reading MWC packet at offset %d" % packet.ByteOffset)
 
             K.FID.seek(packet.ByteOffset,0)
             mwc = K.read_EMdgmMWC()
 
 
-            def make_json_beam( beamData ):
+            def dictoflists2listofdicts( dl ):
+
+                ## Convert dict of lists to list of dicts
+
+                # def make_dict_beam(beamData, i):
+                #     return {
+                #         'beamPointAngReVertical_deg': beamData['beamPointAngReVertical_deg'][i],
+                #         'sampleAmplitude05dB_p' : beamData['sampleAmplitude05dB_p'][i],
+                #         'rxBeamPhase_deg': beamData['rxBeamPhase_deg'][i]
+                #     }
 
                 ## Somewhat ugly due to the dict of lists structure
-                return [{
-                    'beamPointAngReVertical_deg': beamData['beamPointAngReVertical_deg'][i],
-                    'sampleAmplitude05dB_p' : beamData['sampleAmplitude05dB_p'][i],
-                    'rxBeamPhase_deg': beamData['rxBeamPhase_deg'][i]
-                } for i in range(len(beamData['sampleAmplitude05dB_p'])) ]
+                #num_beams = len(beamData['sampleAmplitude05dB_p'])
+                #return [ make_dict_beam( beamData, i ) for i in range(num_beams) ]
+
+                return [dict(zip(dl,t)) for t in zip(*dl.values())]
+
+            mwc_json={}
+            for key,item in mwc.items():
+
+                if key is 'header':
+                    header = mwc['header']
+                    header['dgdatetime'] = str(header['dgdatetime'])
+                    mwc_json[key] = header
+
+                elif key is 'beamData':
+                    mwc_json[key] = dictoflists2listofdicts(mwc['beamData'])
+
+                else:
+                    mwc_json[key] = item
 
 
-            mwc_json = {
-                "beams": make_json_beam(mwc['beamData'])
-            }
+            ## Reformat fields as necessary in header
+            #
+            # mwc_json = {
+            #     "header": header,
+            #     "partition": mwc['partition'],
+            #     "cmnPart": mwc['cmnPart'],
+            #     "txInfo": mwc['txInfo'],
+            #     "beams": dictoflists2listofdicts(mwc['beamData'])
+            # }
+
+
 
             mat_out['MWC'].append(mwc_json)
 

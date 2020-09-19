@@ -8,5 +8,5 @@ m = load(matfile);
 out.mwc = [m.MWC{:}]
 
 for p = 1:numel(out.mwc)
-  out.mwc(p).beams = [out.mwc(p).beams{:}]
+  out.mwc(p).beamData = [out.mwc(p).beamData{:}]
 end
