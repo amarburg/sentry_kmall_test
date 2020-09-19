@@ -73,34 +73,50 @@ if __name__ == '__main__':
         logging.info(mt)
 
         ## Find all of the MWC packets
-        mwc_packets = K.Index.loc[lambda df: df['MessageType'] == "#MWC", : ]
+        #mwc_packets = K.Index.loc[lambda df: df['MessageType'] == "#MWC", : ]
+
         if args.head:
-            mwc_packets = mwc_packets.head( args.head )
+            lines_to_process = K.Index.head( args.head )
+        else:
+            lines_to_process = K.Index
 
         ## Step through MWC packets
-        for packet in mwc_packets.itertuples():
+        for packet in lines_to_process.itertuples():
 
-            logging.info("Reading MWC packet at offset %d" % packet.ByteOffset)
+            exclude_packet_types = [ "#SPO", "#SKM", "#SVP", "#SVT", "#CPO" ]
 
-            K.FID.seek(packet.ByteOffset,0)
-            mwc = K.read_EMdgmMWC()
+            if packet.MessageType in exclude_packet_types:
+                logging.debug("Offset %d:  Skipping message of type %s" %(packet.ByteOffset, packet.MessageType))
+                continue
 
-            mwc_json={}
-            for key,item in mwc.items():
+            logging.info("Reading %s packet at offset %d" % (packet.MessageType,packet.ByteOffset) )
+
+            datagram = K.read_datagram( packet )
+
+            if not datagram:
+                logging.debug("Offset %d:  Type %s, kmall.py returns no datagram, skipping..." % (packet.ByteOffset, packet.MessageType ) )
+                continue
+
+            as_json={}
+            for key,item in datagram.items():
 
                 if key is 'header':
-                    header = mwc['header']
+                    header = datagram['header']
                     header['dgdatetime'] = str(header['dgdatetime'])
-                    mwc_json[key] = header
+                    as_json[key] = header
 
                 elif key is 'beamData':
-                    mwc_json[key] = dictoflists2listofdicts(mwc['beamData'])
+                    as_json[key] = dictoflists2listofdicts(datagram['beamData'])
 
                 else:
-                    mwc_json[key] = item
+                    as_json[key] = item
 
 
-            mat_out['MWC'].append(mwc_json)
+            key = packet.MessageType[1:]
+            if key not in mat_out:
+                mat_out[key] = []
+
+            mat_out[ packet.MessageType[1:] ].append(as_json)
 
 
     if args.output:
