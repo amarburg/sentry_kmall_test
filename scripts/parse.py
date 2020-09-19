@@ -79,7 +79,7 @@ if __name__ == '__main__':
         #     logging.info("%10s : %5d" % (type, count))
 
         mwc_packets = K.Index.loc[lambda df: df['MessageType'] == "#MWC", : ]
-        if args.head > 0:
+        if args.head:
             mwc_packets = mwc_packets.head( args.head )
 
         ## Step through MWC packets
