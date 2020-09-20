@@ -83,7 +83,7 @@ if __name__ == '__main__':
         ## Step through MWC packets
         for packet in lines_to_process.itertuples():
 
-            exclude_packet_types = [ "#SKM" ]
+            exclude_packet_types = [ ]
 
             if packet.MessageType in exclude_packet_types:
                 logging.debug("Offset %d:  Skipping message of type %s" %(packet.ByteOffset, packet.MessageType))
@@ -118,8 +118,14 @@ if __name__ == '__main__':
                     else:
                         as_json[key] = item
 
-                elif key is 'beamData':
+                elif packet.MessageType=="#MWC" and key is 'beamData':
                     as_json[key] = dictoflists2listofdicts(datagram['beamData'])
+
+                elif packet.MessageType is "#SKM" and key is 'sample':
+                    item['KMdefault']['datetime'] = [str(dt) for dt in item['KMdefault']['datetime']]
+                    item['delayedHeave']['datetime'] = [str(dt) for dt in item['delayedHeave']['datetime']]
+
+                    as_json[key] = item
 
                 else:
                     as_json[key] = item
