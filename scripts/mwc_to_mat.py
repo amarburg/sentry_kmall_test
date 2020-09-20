@@ -102,6 +102,7 @@ if __name__ == '__main__':
 
                 if key == 'header':
                     header = datagram['header']
+                    header['dgmType'] = str(header['dgmType'])
                     header['dgdatetime'] = str(header['dgdatetime'])
                     as_json[key] = header
 
@@ -139,6 +140,20 @@ if __name__ == '__main__':
 
 
     if args.output:
+
+        # with open("out.json", "w") as fp:
+        #     def handle_default( obj ):
+        #
+        #         if obj is None:
+        #             return "None"
+        #
+        #         elif isinstance(obj, (bytes, bytearray)):
+        #             return "Bytes"
+        #
+        #         return obj
+        #
+        #     json.dump( mat_out, fp, indent=2, default=handle_default)
+
 
         sio.savemat( args.output, mat_out, long_field_names=True,
                         do_compression=args.compress,
