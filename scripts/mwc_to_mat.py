@@ -100,17 +100,17 @@ if __name__ == '__main__':
             as_json={}
             for key,item in datagram.items():
 
-                if key is 'header':
+                if key == 'header':
                     header = datagram['header']
                     header['dgdatetime'] = str(header['dgdatetime'])
                     as_json[key] = header
 
                 ## SVP has a datetime at the top level
-                elif key is 'datetime':
+                elif key == 'datetime':
                     as_json[key] = str(item)
 
                 ## 'sensorData' in SPO has an embedded date
-                elif key is "sensorData":
+                elif key == "sensorData":
                     sensorData = datagram['sensorData']
                     if 'datetime' in sensorData:
                         sensorData['datetime'] = str(sensorData['datetime'])
@@ -118,10 +118,10 @@ if __name__ == '__main__':
                     else:
                         as_json[key] = item
 
-                elif packet.MessageType=="#MWC" and key is 'beamData':
+                elif packet.MessageType=="#MWC" and key == 'beamData':
                     as_json[key] = dictoflists2listofdicts(datagram['beamData'])
 
-                elif packet.MessageType is "#SKM" and key is 'sample':
+                elif packet.MessageType is "#SKM" and key == 'sample':
                     item['KMdefault']['datetime'] = [str(dt) for dt in item['KMdefault']['datetime']]
                     item['delayedHeave']['datetime'] = [str(dt) for dt in item['delayedHeave']['datetime']]
 
