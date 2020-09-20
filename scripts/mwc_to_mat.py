@@ -121,7 +121,7 @@ if __name__ == '__main__':
                 elif packet.MessageType=="#MWC" and key == 'beamData':
                     as_json[key] = dictoflists2listofdicts(datagram['beamData'])
 
-                elif packet.MessageType is "#SKM" and key == 'sample':
+                elif packet.MessageType=="#SKM" and key == 'sample':
                     item['KMdefault']['datetime'] = [str(dt) for dt in item['KMdefault']['datetime']]
                     item['delayedHeave']['datetime'] = [str(dt) for dt in item['delayedHeave']['datetime']]
 
